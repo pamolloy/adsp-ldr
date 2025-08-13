@@ -18,7 +18,6 @@ ldr_sources = files(
   'src/lfd_bf592.c',
   'src/lfd_bf609.c',
   'src/lfd_sc589.c',
-  'src/termios-mingw.c',
 )
 
 inc_dirs = include_directories('include')
