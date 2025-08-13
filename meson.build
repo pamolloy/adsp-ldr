@@ -4,23 +4,24 @@ project('ldr-utils', 'c',
 )
 
 ldr_sources = files(
-  'ldr.c',
-  'ldr_elf.c',
-  'helpers.c',
-  'lfd.c',
-  'lfd_bf506.c',
-  'lfd_bf518.c',
-  'lfd_bf527.c',
-  'lfd_bf533.c',
-  'lfd_bf537.c',
-  'lfd_bf548.c',
-  'lfd_bf561.c',
-  'lfd_bf592.c',
-  'lfd_bf609.c',
-  'lfd_sc589.c',
+  'src/ldr.c',
+  'src/ldr_elf.c',
+  'src/helpers.c',
+  'src/lfd.c',
+  'src/lfd_bf506.c',
+  'src/lfd_bf518.c',
+  'src/lfd_bf527.c',
+  'src/lfd_bf533.c',
+  'src/lfd_bf537.c',
+  'src/lfd_bf548.c',
+  'src/lfd_bf561.c',
+  'src/lfd_bf592.c',
+  'src/lfd_bf609.c',
+  'src/lfd_sc589.c',
+  'src/termios-mingw.c',
 )
 
-inc_dirs = include_directories('.', 'src/ldr')
+inc_dirs = include_directories('include')
 
 libusb_dep = dependency('libusb-1.0', required: false)
 
