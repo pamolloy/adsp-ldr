@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        c_compiler: [gcc, clang]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y valgrind clang-tidy cppcheck lcov clang-format
+
+    - name: Setup Meson and Ninja
+      run: |
+        pip3 install meson ninja
+
+    - name: Configure Build (${{ matrix.c_compiler }})
+      env:
+        CC: ${{ matrix.c_compiler }}
+      run: |
+        COMMON_WARNING_FLAGS="-Wall -Wextra -Wpedantic -Wstrict-prototypes -Wold-style-definition -Wmissing-prototypes -Wmissing-declarations -Werror"
+        SANITIZER_FLAGS="-fsanitize=address,undefined"
+        COVERAGE_FLAGS="-fprofile-arcs -ftest-coverage"
+
+        meson setup builddir \
+          --reconfigure \
+          -Dbuildtype=debug \
+          -Dc_args="${COMMON_WARNING_FLAGS} ${SANITIZER_FLAGS} ${COVERAGE_FLAGS}" \
+          -Db_coverage=true \
+          -Db_sanitize=address,undefined \
+          -Dwarning_level=3 \
+          -Dwerror=true \
+          -Ddefault_library=static
+
+    - name: Build Project
+      run: meson compile -C builddir
+
+    - name: Check Code Formatting with Clang-Format
+      run: |
+        find src -name "*.c" -print0 | xargs -0 /usr/bin/clang-format --dry-run --Werror || \
+        (echo "Code is not formatted. Run 'clang-format -i' on your changes." && exit 1)
+        find include -name "*.h" -print0 | xargs -0 /usr/bin/clang-format --dry-run --Werror || \
+        (echo "Code is not formatted. Run 'clang-format -i' on your changes." && exit 1)
+
+    - name: Run Tests (if any)
+      run: meson test -C builddir || true
+
+    - name: Run Valgrind
+      run: |
+        valgrind --leak-check=full --show-leak-kinds=all ./builddir/ldr || true
+
+    - name: Run Clang-Tidy
+      if: ${{ matrix.c_compiler == 'clang' }}
+      run: |
+        meson configure builddir -Db_pgo=true
+
+        find src -name "*.c" -print0 | xargs -0 clang-tidy -p builddir || true
+
+    - name: Run Cppcheck
+      run: |
+        cppcheck --enable=all --std=c11 --language=c src/ include/ || true
+
+    - name: Generate Code Coverage Report
+      run: |
+        meson test -C builddir --no-rebuild
+
+        lcov --capture --directory builddir --output-file coverage.info
+        lcov --remove coverage.info '/usr/*' --output-file coverage.info
+        lcov --list coverage.info
