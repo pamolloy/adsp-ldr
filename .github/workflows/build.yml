@@ -9,14 +9,17 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
 
     - name: Install dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install -y meson ninja-build libusb-1.0-0-dev
+        sudo dnf install -y gcc git meson ninja-build libusb1-devel
 
     - name: Configure
       run: meson setup builddir
@@ -26,3 +29,12 @@ jobs:
 
     - name: Test
       run: meson test -C builddir
+
+    - name: Create distribution package
+      run: meson dist -C builddir
+
+    - name: Upload distribution package
+      uses: actions/upload-artifact@v4
+      with:
+        name: adsp-ldr
+        path: builddir/meson-dist/*.tar.xz
